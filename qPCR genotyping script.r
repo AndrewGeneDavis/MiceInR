@@ -1,6 +1,6 @@
 #Convert to het/hom
-library(tidyverse)
-library(ggbeeswarm)
+if(!require("tidyverse")){install.packages("tidyverse")};library(tidyverse)
+if(!require("ggbeeswarm")){install.packages("ggbeeswarm")};library(ggbeeswarm)
 
 TX_data <- data.frame(mouse_ID = c("1426", "1427", "1428", "1429", "1441", "1442", "1443", "1444", "1446", "1447", "1448", "1449", "1450"), data=c(5.811,7.04355,4.6004,4.146,7.1132,8.8459,7.78205,3.88015,5.5749,5.09865,2.85395,3.62735,3.17255),sex=c("Female","Female","Male","Male","Female","Female","Female","Male","Female","Female","Male","Male","Male"))
 TX_data$source = "Transnetyx"
