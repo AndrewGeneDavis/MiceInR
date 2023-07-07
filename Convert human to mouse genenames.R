@@ -43,6 +43,7 @@ gene_index <- read_tsv("HOM_MouseHumanSequence.rpt")
 head(gene_index)
 names(gene_index)
 
+# Look to see if homologs are unqiue
 counted_homologs <- count_entries(gene_index)
 counted_homologs <- count_entries(gene_index, 4)
 length(counted_homologs[,1][[1]])
@@ -51,6 +52,8 @@ counted_homologs[which(counted_homologs$count > 20),]
 ggplot(counted_homologs, aes(x = name, y = count)) +
   geom_point()
 
+
+# convert human gene list to mouse genes
 gene_list <- read_csv("Senescence gene list.csv")
 human_only_genes <- gene_list[which(!is.na(gene_list$Human_Gene_Symbol)),]
 human_only_genes_list <- unique(human_only_genes$Human_Gene_Symbol)
@@ -59,3 +62,65 @@ db_counts <- count_entries(mouse_homologs)
 max(db_counts[,2])
 view(mouse_homologs[which(mouse_homologs[,1] == db_counts[which(db_counts[,2] == 3),1][[1]]),])
 
+
+# genelists from Xue
+proliferation_genes <- read_csv("proliferation.genes.txt")
+sasp_genes <- read_csv("sasp.genes.txt")
+
+### Try again from scratch
+gene_index <- read_tsv("HOM_MouseHumanSequence.rpt")
+
+# find if entry is in database
+source_species = "human"
+symbol_test <- c("FTH1", "EGR2")
+symbol_keys <- c()
+source_db <- gene_index[which(gene_index$`Common Organism Name` == source_species),]
+for(i in 1:length(source_db$Symbol)){
+  for(j in 1:length(symbol_test)){
+    if(source_db$Symbol[i] == symbol_test[j]){
+      symbol_keys <- c(symbol_keys, source_db$`DB Class Key`[i])
+    }
+  }
+}
+
+# extract homologs
+target_species = "mouse, laboratory"
+homologs_index = c()
+target_db <- gene_index[which(gene_index$`Common Organism Name` == target_species),]
+for(i in 1:length(target_db$`DB Class Key`)){
+  for(j in 1:length(symbol_keys)){
+    if(target_db$`DB Class Key`[i] == symbol_keys[j]){
+      homologs_index <- c(homologs_index, i)
+    }
+  }
+}
+homologs <- target_db[homologs_index,]
+
+
+# Wrap it in a function
+find_homologs <- function(genelist, source_species = "human", target_species = "mouse, laboratory", gene_index_name = "HOM_MouseHumanSequence.rpt"){
+  gene_index <- read_csv(gene_index_name)
+  symbol_keys <- c()
+  source_db <- gene_index[which(gene_index$`Common Organism Name` == source_species),]
+  for(i in 1:length(source_db$Symbol)){
+    for(j in 1:length(genelist)){
+      if(source_db$Symbol[i] == genelist[j]){
+        symbol_keys <- c(symbol_keys, source_db$`DB Class Key`[i])
+      }
+    }
+  }
+  homologs_index = c()
+  target_db <- gene_index[which(gene_index$`Common Organism Name` == target_species),]
+  for(i in 1:length(target_db$`DB Class Key`)){
+    for(j in 1:length(symbol_keys)){
+      if(target_db$`DB Class Key`[i] == symbol_keys[j]){
+        homologs_index <- c(homologs_index, i)
+      }
+    }
+  }
+  homologs <- target_db[homologs_index,]
+  return(homologs)
+}
+
+genelist = c("EGR2", "SNTN")
+mouse_genes <- find_homologs(genelist)

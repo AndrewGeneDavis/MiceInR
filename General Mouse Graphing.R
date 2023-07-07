@@ -1,4 +1,5 @@
-library(tidyverse)
+if(!require("tidyverse")){install.packages("tidyverse")};library(tidyverse)
+if(!require("ggbeeswarm")){install.packages("ggbeeswarm")};library(ggbeeswarm)
 
 # data import and cleaning
 filename <- "All mice 06012022_AD.csv"
@@ -25,6 +26,14 @@ ggplot(graph_group, aes(x=Age_Months, fill=Sex)) +
   geom_histogram(binwidth = 0.3333)
 
 ggplot(graph_group, aes(x=Age_Months, fill=Genotype)) +
+  labs(title = filename, subtitle = graph_group$Group[1], x = "Age (Months - 30 Days)", y = "Count") +
+  geom_histogram(binwidth = 0.3333)
+
+ggplot(graph_group, aes(x=Age_Months, fill=Comments)) +
+  labs(title = filename, subtitle = graph_group$Group[1], x = "Age (Months - 30 Days)", y = "Count") +
+  geom_histogram(binwidth = 0.3333)
+
+ggplot(graph_group, aes(x = Age_Months, fill=Comments, col=Genotype)) +
   labs(title = filename, subtitle = graph_group$Group[1], x = "Age (Months - 30 Days)", y = "Count") +
   geom_histogram(binwidth = 0.3333)
 

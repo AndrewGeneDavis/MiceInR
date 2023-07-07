@@ -1,25 +1,62 @@
-#Scripting for WT mice from a pivot table from the various wt lines that are in our lab tracks system
+#Scripting for mice data from lab tracks system exported as a csv
 #Author: Andrew Davis
-#09/22/2020
-library(tidyverse)
-library(RColorBrewer)
+#Started: 09/22/2020
+#Last updated: 11/14/2022
+if(!require("tidyverse")){install.packages("tidyverse")};library(tidyverse)
+if(!require("ggbeeswarm")){install.packages("ggbeeswarm")};library(ggbeeswarm)
+if(!require("RColorBrewer")){install.packages("RColorBrewer")};library(RColorBrewer)
 if(!require(car)){install.packages("car")};library(car)
+if(!require(ggpattern)){install.packages("ggpattern")};library(ggpattern)
 
-All_Mice <- read_csv("Mouse Colonies 05172022_AD.csv")
+#import data
+All_Mice <- read_csv("All Mice 12142022_AD.csv")
+import_date <- Sys.Date()
+
+
+#some mice in the inventory have not been made invisible, but instead are listed in cages marked "<empty>".
+#remove these non-existant mice
 All_Mice <- All_Mice[which(All_Mice$`Cage #` != "<Empty>"),]
+
+#make columns for various age conversions and remove newlines from comment data
 All_Mice$Age_Weeks <- All_Mice$Age/7
-All_Mice$Age_Months <- All_Mice$Age/30
+All_Mice$Age_Months <- All_Mice$Age/30.41
 All_Mice$Age_Years <- All_Mice$Age/365
-All_Mice <- mutate(.data = All_Mice, cage_unique = paste(Group,`Cage #`))
 All_Mice$Comments <- gsub("\n", "", All_Mice$Comments)
-All_Mice <- All_Mice[-which((All_Mice$Comments == "cull")),]
+All_Mice$Group <- All_Mice$`Group Name`
+All_Mice$Comments[which(is.na(All_Mice$Comments))] <- "Empty"
+All_Mice$Comments[which(All_Mice$Comments == "cull1")] <- "cull"
+
+#make unique cage numbers among groups so that we can calculate the number of cages in each group
+Groups <- unique(All_Mice$Group)
+All_Mice <- mutate(.data = All_Mice, cage_unique = paste(Group,`Cage #`))
+Cages <- aggregate(cage_unique ~ Group, All_Mice, FUN=function(x) length(unique(x)))
+Cages <- Cages[order(Cages$cage_unique, decreasing = T),]
+ggplot(Cages, aes(x = Group, y = cage_unique)) +
+  labs(title = "Cages in colonies", x = "Line", y = "Cage Count") +
+  geom_bar(stat = 'identity')
+
+#make separate data frame for P01 mice based on custom list
+P01_liver_lines <- c("Pten (MNV-Free Room 6107) (S-25)", "TFAM - Breeding - Quar", "TFAM - Exp - Quar", "FAH KO - Quar (S-33)", "eGFP (S-43)", "STAT1 (S-21)", "FAH KO (S-44)", "rCAS (S-18)", "WT (MNV-Free Room 6107)  (S-24)", "CAS9 (MNV-Free Room 6107)  (S- 23)", "Adams/Feng: C57BL/6JN-COHORT- Lee-22-002", "Adams:(B-4) 8/23/22 CR Aaron C57BL/6", "Adams: C57BL/6JN-CR(Gout) AUF 21-008 (S-423) ( Young Ctrl)", "Adams :( B-4) 4133- WT:C57BL/6 (21-011)  (S-522)", "Adams: C57BL/6JN - CR - 19-100  (S-178) (S-178)", "Adams: (B-4) 8/23/22 CR Aaron C57BL/6JN NIA(free)", "Adams: C57BL/6 - NIA  (S-558)", "Adams:WT (22-034)")
+P01_Mice <- All_Mice[All_Mice$Group %in% P01_liver_lines,]
+P01_Mice_without_cull <- P01_Mice[which(P01_Mice$Comments!="cull"),]
+P01_Cages <- aggregate(cage_unique ~ Group, P01_Mice, FUN=function(x) length(unique(x)))
+P01_Cages <- P01_Cages[order(P01_Cages$cage_unique, decreasing = T),]
+P01_Cages_without_cull <- aggregate(cage_unique ~ Group, P01_Mice_without_cull, FUN=function(x) length(unique(x)))
+P01_Cages_without_cull <- P01_Cages_without_cull[order(P01_Cages_without_cull$cage_unique, decreasing = T),]
+
+sum(P01_Cages$cage_unique)
+sum(P01_Cages_without_cull$cage_unique)
+
+ggplot(P01_Cages, aes(x = Group, y = cage_unique)) +
+  labs(title = "Cages in colonies", x = "Line", y = "Cage Count") +
+  geom_bar(stat = 'identity')
+
+
 
 #View(All_Mice)
 mouse_groups <- unique(All_Mice$Group)
-lines <- unique(All_Mice$Group)
-B4_lines <- lines[grep("Adams", lines)]
+B4_lines <- Groups[grep("Adams", Groups)]
 experimental_lines <- B4_lines[which(B4_lines != "Adams : 4133- WT:C57BL/6 (21-011)  (S-522)")]
-
 
 ### Mouse Numbers
 WT_agnog_Mice <- All_Mice[which(All_Mice$Group == "WT (S-5)"|All_Mice$Group == "Adams : 4133- WT:C57BL/6 (21-011)  (S-522)"),]
@@ -28,64 +65,62 @@ WT_MNV_free_Mice <- All_Mice[which(All_Mice$Group == "WT (MNV-Free Room 6107)  (
 Cas9_MNV_free_Mice <- All_Mice[which(All_Mice$Group == "CAS9 (MNV-Free Room 6107)  (S- 23)"),]
 PTEN_Mice <- All_Mice[which(All_Mice$Group == "Pten (MNV-Free Room 6107) (S-25)"),]
 STAT1_Mice <- All_Mice[which(All_Mice$Group == "STAT1 (S-21)"),]
+HET3_Mice <- All_Mice[which(All_Mice$Group == "HET3 (MNV-Free) (S-32)"),]
+ACA_Mice <- All_Mice[which(All_Mice$Group == "ACA (S-19)"),]
+TP53BP1_Mice <- All_Mice[which(All_Mice$Group == "TP53BP1 (MNV-Free Room 6107) (S-28)"),]
 Experimental_Mice <- All_Mice[which(All_Mice$Group == experimental_lines[1]),]
 for(i in 2:length(experimental_lines)){
   Experimental_Mice <- rbind(Experimental_Mice,All_Mice[which(All_Mice$Group == experimental_lines[i]),])
 }
-
 Experimental_Mice[which(Experimental_Mice$Sex=="Female"),"Group"]
 
-
-### Cages
-cagenumbers <- c(
-  length(unique(WT_agnog_Mice$cage_unique)),
-  length(unique(Cas9_agnog_Mice$cage_unique)),
-  length(unique(WT_MNV_free_Mice$cage_unique)),
-  length(unique(Cas9_MNV_free_Mice$cage_unique)),
-  length(unique(PTEN_Mice$cage_unique)),
-  length(unique(STAT1_Mice$cage_unique)),
-  length(unique(Experimental_Mice$cage_unique))
-)
-sum(cagenumbers)
-
-Cull_list <- All_Mice[which(All_Mice$Age_Months >= 22),]
-length(Cull_list$`Pedigree #`)
-
-#Mouse Numbers
-#22 mo and over in mnv-agnostic line
-ggplot(Cull_list, aes(x = Age_Months, fill = Sex)) +
-  labs(title = "P01 (Adams) Aging Colony", subtitle = paste("22 mo and over.", Cull_list$Group[1]), x = "Age (Months - 30 Days)", y = "Count") +
-  geom_histogram(binwidth = 0.3333)
+#Graphs of Mice
 #WT (S-5)
 ggplot(WT_agnog_Mice, aes(x=Age_Months, fill=Comments, col = Sex)) +
-  labs(title = "P01 (Adams) Aging Colony", subtitle = paste(WT_agnog_Mice$Group[1], "MNV agnostic"), x = "Age (Months - 30 Days)", y = "Count") +
+  labs(title = "P01 (Adams) Aging Colony", subtitle = paste(WT_agnog_Mice$Group[1], "MNV agnostic"), x = "Age (Months - 30 Days)", y = "# of mice") +
   geom_histogram(binwidth = 0.3333)
 #rCAS (MNV-agnostic)
 ggplot(Cas9_agnog_Mice, aes(x=Age_Months, fill=Comments, col = Sex)) +
-  labs(title = "P01 (Adams) Aging Colony", subtitle = paste(Cas9_agnog_Mice$Group[1], "MNV agnostic"), x = "Age (Months - 30 Days)", y = "Count") +
+  labs(title = "P01 (Adams) Aging Colony", subtitle = paste(Cas9_agnog_Mice$Group[1], "MNV agnostic"), x = "Age (Months - 30 Days)", y = "# of mice") +
   geom_histogram(binwidth = 0.3333)
 #WT MNV-free
-ggplot(WT_MNV_free_Mice, aes(x=Age_Months, fill=Comments, col = Sex)) +
-  labs(title = "P01 (Adams) Aging Colony", subtitle = paste(WT_MNV_free_Mice$Group[1], "MNV-free"), x = "Age (Months - 30 Days)", y = "Count") +
+ggplot(WT_MNV_free_Mice, aes(x=Age_Months, fill=Sex, col = Comments)) +
+  labs(title = "P01 (Adams) Aging Colony", subtitle = paste(WT_MNV_free_Mice$Group[1], "MNV-free"), x = "Age (Months - 30 Days)", y = "# of mice") +
+  geom_histogram(binwidth = 0.3333)
+#WT MNV-free minus cull mice
+ggplot(WT_MNV_free_Mice[which(WT_MNV_free_Mice$Comments!="cull"),], aes(x=Age_Months, fill=Sex, col = Comments)) +
+  labs(title = "P01 (Adams) Aging Colony", subtitle = paste(WT_MNV_free_Mice$Group[1], "MNV-free"), x = "Age (Months - 30 Days)", y = "# of mice") +
   geom_histogram(binwidth = 0.3333)
 # ggsave(paste0("WT_MNV_free_Mice", mouse_groups[15], ".png"))
 #CAS9 MNV-free
-ggplot(Cas9_MNV_free_Mice, aes(x=Age_Months, fill=Comments, col = Sex)) +
-  labs(title = "P01 (Adams) Lab Aging Colony", subtitle = paste(Cas9_MNV_free_Mice$Group[1], "MNV-free"), x = "Age (Months - 30 Days)", y = "Count") +
+ggplot(Cas9_MNV_free_Mice, aes(x=Age_Months, fill=Sex, col = Comments)) +
+  labs(title = "P01 (Adams) Lab Aging Colony", subtitle = paste(Cas9_MNV_free_Mice$Group[1], "MNV-free"), x = "Age (Months - 30 Days)", y = "# of mice") +
   geom_histogram(binwidth = 0.3333)
 #PTEN
 ggplot(PTEN_Mice, aes(x=Age_Months, fill=Sex)) +
-  labs(title = "PTEN Colony", subtitle = paste(PTEN_Mice$Group[1], "MNV-free"), x = "Age (Months - 30 Days)", y = "Count") +
+  labs(title = "PTEN Colony", subtitle = paste(PTEN_Mice$Group[1], "MNV-free"), x = "Age (Months - 30 Days)", y = "# of mice") +
   geom_histogram(binwidth = 0.3333)
 #STAT1
 ggplot(STAT1_Mice, aes(x=Age_Months, fill=Sex)) +
-  labs(title = "STAT1 Colony", subtitle = paste(STAT1_Mice$Group[1], "MNV agnostic"), x = "Age (Months - 30 Days)", y = "Count") +
+  labs(title = "STAT1 Colony", subtitle = paste(STAT1_Mice$Group[1], "MNV agnostic"), x = "Age (Months - 30 Days)", y = "# of mice") +
   geom_histogram(binwidth = 0.3333)
 #all others in experimental facility
 ggplot(Experimental_Mice, aes(x=Age_Months, fill=Sex)) +
-  labs(title = "Experimental Mice", subtitle = paste("Various line names"), x = "Age (Months - 30 Days)", y = "Count") +
+  labs(title = "Experimental Mice", subtitle = paste("Various line names"), x = "Age (Months - 30 Days)", y = "# of mice") +
   geom_histogram(binwidth = 0.3333) +
   scale_x_continuous(limits = c(0,max(Experimental_Mice$Age_Months)+2))
+#HET3
+ggplot(HET3_Mice, aes(x=Age_Months, fill=Sex)) +
+  labs(title = "HET3 Colony", subtitle = paste(HET3_Mice$Group[1], "MNV-free"), x = "Age (Months - 30 Days)", y = "# of mice") +
+  geom_histogram(binwidth = 0.3333)
+#ACA
+ggplot(ACA_Mice, aes(x=Age_Months, fill=Sex)) +
+  labs(title = "ACA Colony", subtitle = paste(ACA_Mice$Group[1],", ",import_date), x = "Age (Months - 30 Days)", y = "Count") +
+  geom_histogram(binwidth = 0.3333)
+#TP53BP1
+ggplot(TP53BP1_Mice, aes(x=Age_Months, fill=Sex)) +
+  labs(title = "TP53BP1 Colony", subtitle = paste(TP53BP1_Mice$Group[1],", ",import_date), x = "Age (Months - 30 Days)", y = "Count") +
+  geom_histogram(binwidth = 0.3333)
 
 
 # Cage numbers
@@ -95,28 +130,6 @@ All_Mice %>%
   tally() %>% 
   tally()
 
-#ACA mice graph update
-
-mouse_data_filename <- "ACA 05052022_AD.csv"
-ACA_Mice <- read_csv(mouse_data_filename)
-ACA_Mice_time <- as.Date(file.info(mouse_data_filename)[1,"mtime"])
-ACA_Mice$Age_Months <- ACA_Mice$Age/30
-ACA_Mice$is_breeder <- !is.na(ACA_Mice$`Breeding Start`)
-#ACA_Mice <- ACA_Mice[which(!is.na(ACA_Mice$`Breeding Start`)),]
-ACA_Mice <- ACA_Mice[which((ACA_Mice$Age_Months < 3 | !is.na(ACA_Mice$Genotype) & is.na(ACA_Mice$`Breeding Start`))),]
-
-
-ggplot(ACA_Mice, aes(x=Age_Months, fill=Sex)) +
-  labs(title = "ACA Colony", subtitle = paste(ACA_Mice$Group[1],", ",ACA_Mice_time), x = "Age (Months - 30 Days)", y = "Count") +
-  geom_histogram(binwidth = 0.3333)
-
-ggplot(ACA_Mice, aes(x=Age_Months, fill=Genotype, col = Sex)) +
-  labs(title = "ACA Colony", subtitle = paste(ACA_Mice$Group[1],", ",ACA_Mice_time), x = "Age (Months - 30 Days)", y = "Count") +
-  geom_histogram(binwidth = 0.3333)
-
-ggplot(ACA_Mice, aes(x=Age_Months, fill=Comments, col = Genotype)) +
-  labs(title = "ACA Colony", subtitle = paste(ACA_Mice$Group[1],", ",ACA_Mice_time), x = "Age (Months - 30 Days)", y = "Count") +
-  geom_histogram(binwidth = 0.3333)
 
 #General mice graph update
 
@@ -251,8 +264,29 @@ mean(wt_litters$`Pup Female #`)
 # Average time between litters
 mean(mating_distances)
 
-# Cage counts 5/2/2022
-B6 <- c(43, 29, 27, 20, 16, 4, 2)
-B4 <- c(23, 8, 7, 7, 6, 5, 4, 2, 2, 1)
-sum(B4)
-sum(B6, B4)
+# Get litter distribution of HET3 mice
+HET3_Mice$parents <- mutate(.data = HET3_Mice, parents = paste(`Dam #`, `Sire #`))$parents
+HET3_Mice$litter <- mutate(.data = HET3_Mice, litter = paste(parents, `Birth Date`))$litter
+HET3_Mice$count = 1
+
+#get the number of mice in each litter and the sex breakdown
+#filter out the original parents and unsexed mice
+HET3_Mice_clean <- HET3_Mice[which(!is.na(HET3_Mice$`Dam #`) & !is.na(HET3_Mice$Sex)),]
+litter_counts <- aggregate(count ~ `Dam #` + `Sire #` + `Birth Date`, HET3_Mice_clean, FUN = function(x) length(x))
+litter_counts$male <- aggregate(count ~ `Dam #` + `Sire #` + `Birth Date`, HET3_Mice_clean[which(HET3_Mice_clean$Sex == "Male"),], FUN = function(x) length(x))$count
+litter_counts <- mutate(litter_counts, female = count-male)
+litter_counts <- mutate(litter_counts, `% female` = round(1-male/count, digits = 2)*100)
+
+#aggregate(count ~ `Dam #` + `Sire #` + `Birth Date` + Sex, HET3_Mice_clean, FUN = function(x) length(x))
+
+write_csv(litter_counts, "UMHET3_Litter_counts.csv")
+
+HET3_Mice_clean[which(HET3_Mice_clean$`Birth Date` == "10/26/2022"),]
+
+NIAOrders <- read_tsv("NIA Orders.tsv")
+names(NIAOrders)
+NIAOrders <- mutate(NIAOrders, Request = paste0(NIAOrders$User, " ", NIAOrders$AUF, "\n", NIAOrders$Project))
+ggplot(NIAOrders, aes(x = Request, y = `# of mice requested`, fill = Sex)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  labs(title = "NIA mouse requests", subtitle = "March 2023; we can order 80 mice total")
