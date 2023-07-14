@@ -1,6 +1,7 @@
 # Test export with 'locations' feature
 
 if(!require("tidyverse")){install.packages("tidyverse")};library(tidyverse)
+if(!require("readxl")){install.packages("readxl")};library(readxl)
 
 # Save csv files as UTF-8 to avoid an import issue with em-dashes
 # or subsitute em dashes with the commented line below this one
@@ -20,10 +21,10 @@ if(!require("tidyverse")){install.packages("tidyverse")};library(tidyverse)
 
 #Data input
 {
-  database_input_files <- c("B4 mice 06222023.csv", "B6 mice 06222023.csv")
-  b4_mice_raw <- read_csv(database_input_files[1])
+  database_input_files <- c("B4mice_07122023_AD.xlsx", "B6mice_07122023_AD.xlsx")
+  b4_mice_raw <- read_xlsx(database_input_files[1])
   import_date_b4 <- substring(file.info(database_input_files[1])[[4]], 1, 10)
-  b6_mice_raw <- read_csv(database_input_files[2])
+  b6_mice_raw <- read_xlsx(database_input_files[2])
   import_date_b6 <- substring(file.info(database_input_files[2])[[4]], 1, 10)
   if(import_date_b4 == import_date_b6){
     import_date <- import_date_b4
